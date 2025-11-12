@@ -17,6 +17,7 @@ int scl = 8;
 int sda = 9;
 int i2cAddress = 0x3C; 
 
+
 // 'Full Cup', 124x64px
 const unsigned char bitmap_FullCup [] PROGMEM = {
 	0x00, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
@@ -469,16 +470,38 @@ int getWaterLevel(){
   return p;
 }
 
-void adjustIcon(int p){
+void updateCup(int p){
+	int cupXStart1 = 5;
+	int cupXEnd1 = 54;
+	int cupXStart2 = 8;
+	int cupXEnd2 = 52;
+	int cupX2StartY = 52;
+	int cupYStart = 22;
+	int cupYEnd = 58;
+	int linesTotalCount = cupYEnd - cupYStart;
+
+	p = 100;
+
+	display.clearDisplay();
+	display.drawBitmap(0,0, bitmap_FullCup, 124, 64, WHITE);
+	
+	int linesToRemove = float(1.0 - float(p/100.0)) * linesTotalCount;
+
+	Serial.println(linesToRemove);
+	
+	if (linesToRemove > (cupX2StartY - cupYStart)) {
+		display.fillRect(cupXStart1, cupYStart, (cupXEnd1-cupXStart1), (cupX2StartY-cupYStart), BLACK);
+		linesToRemove = linesToRemove - (cupX2StartY-cupYStart);
+		display.fillRect(cupXStart2, cupX2StartY, (cupXEnd2-cupXStart2), linesToRemove, BLACK);
+	} else {
+		display.fillRect(cupXStart1, cupYStart, (cupXEnd1-cupXStart1), linesToRemove, BLACK);
+	}
+}
+void updateDisplay(int p){
 	
 	display.clearDisplay();
 
-	if (p > 80) display.drawBitmap(0,0, bitmap_FullCup, 124, 64, WHITE);
-	else if (80 >= p && p > 60) display.drawBitmap(0,0, bitmap_80Cup, 124, 64, WHITE);
-	else if (60 >= p && p > 40) display.drawBitmap(0,0, bitmap_60Cup, 124, 64, WHITE);
-	else if (40 >= p && p > 20) display.drawBitmap(0,0, bitmap_40Cup, 124, 64, WHITE);
-	else if (20 >= p && p > 5) display.drawBitmap(0,0, bitmap_20Cup, 124, 64, WHITE);
-	else display.drawBitmap(0,0, bitmap_EmptyCup, 124, 64, WHITE);
+	updateCup(p);
 
 	display.setCursor(80, 32);
     display.println(String(p)+"%");
@@ -497,17 +520,12 @@ void setup()
   display.clearDisplay();
   display.setTextColor(WHITE, BLACK);
   display.setTextSize(2);
-  display.drawBitmap(0,0, bitmap_FullCup, 124, 64, WHITE);
-
-
 }
 
 void loop()
 {
     int p = getWaterLevel();
-
-	adjustIcon(p);
-
-    delay(5000);
+	updateDisplay(p);
+    delay(1000);
 }
 
