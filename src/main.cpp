@@ -480,8 +480,6 @@ void updateCup(int p){
 	int cupYEnd = 58;
 	int linesTotalCount = cupYEnd - cupYStart;
 
-	p = 100;
-
 	display.clearDisplay();
 	display.drawBitmap(0,0, bitmap_FullCup, 124, 64, WHITE);
 	
