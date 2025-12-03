@@ -4,12 +4,12 @@
 #include <HCSR04.h>
 #include <Adafruit_SSD1306.h>
 
-#include <RollingAverage.h> 
+#include <RollingAverage.hpp> 
 
 // Distance Sensor
 int triggerPin = 13;
 int echoPin = 15;
-RollingAverage distances(300);
+RollingAverage distances(200);
  
 
 // Display

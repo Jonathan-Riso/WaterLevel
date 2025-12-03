@@ -1,5 +1,8 @@
 #include <vector>
 
+#ifndef RollingAverage_H
+#define RollingAverage_H
+
 class RollingAverage{
     private:
         int max_size;
@@ -11,4 +14,6 @@ class RollingAverage{
         RollingAverage(int size);
         void addValue(double value);
         double getAverage() const;
-}
+};
+
+#endif
