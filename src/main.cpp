@@ -1,26 +1,26 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_VL53L0X.h>
+#include <HCSR04.h>
 #include <Adafruit_SSD1306.h>
 
-Adafruit_VL53L0X sensorDistance;
+#include <RollingAverage.h> 
 
 // Distance Sensor
-int sclDistance = 12;
-int sdaDistance = 11;
-TwoWire I2C_Distance = TwoWire();
-Adafruit_VL53L0X lox = Adafruit_VL53L0X();
+int triggerPin = 13;
+int echoPin = 15;
+RollingAverage distances(300);
+ 
 
 // Display
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
-int sclDisplay = 12;
-int sdaDisplay = 14;
+int sclDisplay = 4;
+int sdaDisplay = 5;
 int i2cAddress = 0x3C; 
-TwoWire I2C_Display = TwoWire(); 
+TwoWire I2C_Display = TwoWire(1); 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &I2C_Display, -1);
 
 // 'Full Cup', 124x64px
@@ -94,23 +94,18 @@ const unsigned char bitmap_FullCup [] PROGMEM = {
 
 // Distance Functions
 int getWaterLevel(){
-
-  	VL53L0X_RangingMeasurementData_t measure;
-  	lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
-
-	if (measure.RangeStatus != 4) {  // phase failures have incorrect data
 		
-		// (Max - Current)/(Max - Min) * 100
-		int distance = measure.RangeMilliMeter;
-		int p = (float(480 - distance)/float(480-220));
+	// (Max - Current)/(Max - Min) * 100
+	double* distance = HCSR04.measureDistanceMm(20);
+	distances.addValue(*distance);
+	
+	int p = (float(480 - distances.getAverage())/float(480-220));
 
-		
-		if (distance > 480) { p = 0; }
-		else if (p < 0) p = 0;
-		if (p > 100) p = 100;
-		return p;
-	}
-	return -1;
+	
+	if (distances.getAverage() > 480) { p = 0; }
+	else if (p < 0) p = 0;
+	if (p > 100) p = 100;
+	return p;
 }
 
 // Display Functions
@@ -153,10 +148,13 @@ void updateDisplay(int p){
 
 void setup()
 {
-	Serial.begin(9600);
+	delay(100);
+
+	Serial.begin(115200);
+	HCSR04.begin(triggerPin, echoPin);
 	
 	// Set up display
-	I2C_Display.pins(sdaDisplay, sclDisplay);
+	I2C_Display.setPins(sdaDisplay, sclDisplay);
 	if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
 		Serial.println(F("SSD1306 allocation failed"));
 		while(1);
@@ -167,22 +165,12 @@ void setup()
 	display.setTextSize(2);
 	display.drawBitmap(0,0, bitmap_FullCup, 124, 64, WHITE);
 	display.display();
-
-
-	// Set up sensor
-	// I2C_Distance.pins(sdaDistance, sclDistance);
-  	// if (!lox.begin(0x29, false, &I2C_Distance)) {
-    // 	Serial.println(F("Failed to boot VL53L0X"));
-    // 	while(1);
-	// }
 }
 
 void loop()
 {
-    // int p = getWaterLevel();
-	for (int i=0; i<101; i++){ 
-		updateDisplay(i);
-		delay(100);
-	}
+    int p = getWaterLevel();
+	updateDisplay(p);
+	delay(1000);
 }
 
