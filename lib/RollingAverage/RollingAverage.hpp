@@ -1,5 +1,3 @@
-#include <vector>
-
 #ifndef RollingAverage_H
 #define RollingAverage_H
 
@@ -8,12 +6,12 @@ class RollingAverage{
         int max_size;
         int current_count;
         int index;
-        double sum;
-        std::vector<double> buffer; 
+        int sum;
+        int buffer[50]; 
     public:
-        RollingAverage(int size);
-        void addValue(double value);
-        double getAverage() const;
+        RollingAverage();
+        void addValue(int value);
+        float getAverage() const;
 };
 
 #endif

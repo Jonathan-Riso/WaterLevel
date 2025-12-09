@@ -7,9 +7,9 @@
 #include <RollingAverage.hpp> 
 
 // Distance Sensor
-int triggerPin = 13;
-int echoPin = 15;
-RollingAverage distances(200);
+int triggerPin = 3;
+int echoPin = 4;
+RollingAverage distances;
  
 
 // Display
@@ -17,11 +17,8 @@ RollingAverage distances(200);
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
-int sclDisplay = 4;
-int sdaDisplay = 5;
 int i2cAddress = 0x3C; 
-TwoWire I2C_Display = TwoWire(1); 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &I2C_Display, -1);
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
 // 'Full Cup', 124x64px
 const unsigned char bitmap_FullCup [] PROGMEM = {
@@ -91,20 +88,49 @@ const unsigned char bitmap_FullCup [] PROGMEM = {
 	0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+int getUltraSonicDistance(){
+	float duration, distance;
+	// Send a short, low pulse to the trigger pin to start
+	digitalWrite(triggerPin, LOW);
+	delayMicroseconds(2);
 
+	// Send a 10-microsecond HIGH pulse to trigger the sensor
+	digitalWrite(triggerPin, HIGH);
+	delayMicroseconds(10);
+	digitalWrite(triggerPin, LOW);
+
+	// Measure the duration of the pulse traveling to the object and back
+	duration = pulseIn(echoPin, HIGH);
+
+	// Calculate the distance using the formula: distance = (time * speed of sound) / 2
+	// Speed of sound is approximately 0.034 cm/microsecond
+	distance = duration * 0.34 / 2;
+
+	// Print the calculated distance to the Serial Monitor
+	Serial.print("Distance: ");
+	Serial.print(distance);
+	Serial.println(" mm");
+
+	return int(distance);
+}
 // Distance Functions
 int getWaterLevel(){
 		
 	// (Max - Current)/(Max - Min) * 100
-	double* distance = HCSR04.measureDistanceMm(20);
-	distances.addValue(*distance);
+	int distance = getUltraSonicDistance();
+	if (distance > 200) distance = 200;
+	distances.addValue(distance);
+	float avg = distances.getAverage();
 	
-	int p = (float(480 - distances.getAverage())/float(480-220));
+	int p = (float(200 - avg)/float(200-20)) * 100;
 
+	if (avg > 185) p = 0;
+
+	Serial.print("Average:");
+	Serial.println(avg);
+	Serial.print("Percent:");
+	Serial.println(p);
 	
-	if (distances.getAverage() > 480) { p = 0; }
-	else if (p < 0) p = 0;
-	if (p > 100) p = 100;
 	return p;
 }
 
@@ -124,7 +150,7 @@ void updateCup(int p){
 	
 	int linesToRemove = float(1.0 - float(p/100.0)) * linesTotalCount;
 
-	Serial.println(linesToRemove);
+	Serial.println(p);
 	
 	if (linesToRemove > (cupX2StartY - cupYStart)) {
 		display.fillRect(cupXStart1, cupYStart, (cupXEnd1-cupXStart1), (cupX2StartY-cupYStart), BLACK);
@@ -151,10 +177,11 @@ void setup()
 	delay(100);
 
 	Serial.begin(115200);
-	HCSR04.begin(triggerPin, echoPin);
+	  // Set the trigger pin as an output
+  	pinMode(triggerPin, OUTPUT);
+	// Set the echo pin as an input
+	pinMode(echoPin, INPUT);
 	
-	// Set up display
-	I2C_Display.setPins(sdaDisplay, sclDisplay);
 	if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
 		Serial.println(F("SSD1306 allocation failed"));
 		while(1);

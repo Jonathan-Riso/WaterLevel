@@ -1,12 +1,11 @@
-#include <vector>
 #include <RollingAverage.hpp>
 
 
-RollingAverage::RollingAverage(int size): max_size(size), sum(0.0), index(0), current_count(0) {
-    buffer.resize(size, 0.0);
+RollingAverage::RollingAverage(): max_size(50), current_count(0), index(0), sum(0.0) {
+    for(int i = 0; i<max_size; i++) buffer[i] = 0;
 } 
     
-void RollingAverage::addValue(double value){
+void RollingAverage::addValue(int value){
     sum -= buffer[index];
     sum += value;
     buffer[index] = value;
@@ -16,7 +15,7 @@ void RollingAverage::addValue(double value){
     if (current_count<max_size) current_count++;
 } 
 
-double RollingAverage::getAverage() const {
-    if (current_count<max_size) return 0;
+float RollingAverage::getAverage() const {
+    if (current_count==0) return 0;
     return sum/current_count;
 }
